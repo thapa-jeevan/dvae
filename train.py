@@ -1,18 +1,19 @@
 import argparse
+
 import torch
-from torch import nn, optim
-from torchvision import datasets, transforms
-from torchvision.utils import save_image
-from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torch import nn, optim
+from torchvision.utils import save_image
+
+from dataset import get_dataloader
 from dvae import DiscreteVAE
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train VAE for DALLE-pytorch')
-    parser.add_argument('--batchSize', type=int, default=24, help='batch size for training (default: 24)')
-    parser.add_argument('--dataPath', type=str, default="./imagedata", help='path to imageFolder (default: ./imagedata')
-    parser.add_argument('--imageSize', type=int, default=256, help='image size for training (default: 256)')
+    parser.add_argument('--batch_size', type=int, default=24, help='batch size for training (default: 24)')
+    parser.add_argument('--img_folder', type=str, default="./imagedata", help='path to imageFolder (default: ./imagedata')
+    parser.add_argument('--img_size', type=int, default=256, help='image size for training (default: 256)')
     parser.add_argument('--n_epochs', type=int, default=500, help='number of epochs (default: 500)')
     parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-4)')
     parser.add_argument('--tempsched', action='store_true', default=False, help='use temperature scheduling')
@@ -27,8 +28,8 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    imgSize = args.imageSize  # 256
-    batchSize = args.batchSize  # 24
+    img_size = args.img_size  # 256
+    batch_size = args.batch_size  # 24
     n_epochs = args.n_epochs  # 500
     log_interval = 10
     lr = args.lr  # 1e-4
@@ -45,7 +46,7 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     vae = DiscreteVAE(
-        image_size=imgSize,
+        image_size=img_size,
         num_layers=3,
         channels=3,
         num_tokens=2048,
@@ -59,15 +60,7 @@ if __name__ == '__main__':
         vae.load_state_dict(vae_dict)
 
     vae.to(device)
-
-    t = transforms.Compose([
-        transforms.Resize(imgSize),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # (0.267, 0.233, 0.234))
-    ])
-
-    train_set = datasets.ImageFolder(args.dataPath, transform=t, target_transform=None)
-    train_loader = DataLoader(dataset=train_set, num_workers=1, batch_size=batchSize, shuffle=True)
+    train_dataloader = get_dataloader(args.batch_size, args.img_folder, args.img_size)
 
     optimizer = optim.Adam(vae.parameters(), lr=lr)
 
@@ -80,13 +73,13 @@ if __name__ == '__main__':
 
     if temperature_scheduling:
         vae.temperature = args.temperature
-        dk = 0.7 ** (1 / len(train_loader))
+        dk = 0.7 ** (1 / len(train_dataloader))
         print('Scale Factor:', dk)
 
     for epoch in range(start_epoch, start_epoch + n_epochs):
 
         train_loss = 0
-        for batch_idx, (images, _) in enumerate(train_loader):
+        for batch_idx, (images, _) in enumerate(train_dataloader):
             images = images.to(device)
             recons = vae(images)
             loss = F.smooth_l1_loss(images, recons) + F.mse_loss(images, recons)
@@ -101,8 +94,8 @@ if __name__ == '__main__':
 
             if batch_idx % log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.8f}'.format(
-                    epoch, batch_idx * len(images), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader),
+                    epoch, batch_idx * len(images), len(train_dataloader.dataset),
+                           100. * batch_idx / len(train_dataloader),
                            loss.item() / len(images)))
 
         if temperature_scheduling:
@@ -118,6 +111,6 @@ if __name__ == '__main__':
                    'results/' + name + '_epoch_' + str(epoch) + '.png', normalize=True)
 
         print('====> Epoch: {} Average loss: {:.8f}'.format(
-            epoch, train_loss / len(train_loader.dataset)))
+            epoch, train_loss / len(train_dataloader.dataset)))
 
         torch.save(vae.state_dict(), "./models/" + name + "-" + str(epoch) + ".pth")
