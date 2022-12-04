@@ -79,7 +79,7 @@ if __name__ == '__main__':
     for epoch in range(start_epoch, start_epoch + n_epochs):
 
         train_loss = 0
-        for batch_idx, (images, _) in enumerate(train_dataloader):
+        for batch_idx, images in enumerate(train_dataloader):
             images = images.to(device)
             recons = vae(images)
             loss = F.smooth_l1_loss(images, recons) + F.mse_loss(images, recons)
