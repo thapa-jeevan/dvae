@@ -113,4 +113,4 @@ if __name__ == '__main__':
         print('====> Epoch: {} Average loss: {:.8f}'.format(
             epoch, train_loss / len(train_dataloader.dataset)))
 
-        torch.save(vae.state_dict(), "./models/" + name + "-" + str(epoch) + ".pth")
+        torch.save(vae.state_dict(), "./checkpoints/" + name + "-" + str(epoch) + ".pth")
