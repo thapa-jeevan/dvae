@@ -32,7 +32,7 @@ if __name__ == '__main__':
         num_tokens=2048,
         codebook_dim=256,
         hidden_dim=128,
-        temperature=args.temperature
+        temperature=0
     )
 
     if args.loadVAE != "":
