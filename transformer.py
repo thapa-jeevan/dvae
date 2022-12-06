@@ -12,7 +12,7 @@ class VQGANTransformer(nn.Module):
         self.sos_token = args.sos_token
 
         transformer_config = {
-            "vocab_size": 2048,
+            "vocab_size": 2049,
             "block_size": 256,
             "n_layer": 24,
             "n_head": 16,
@@ -23,6 +23,7 @@ class VQGANTransformer(nn.Module):
         self.pkeep = args.pkeep
 
     def forward(self, indices):
+        indices += 1
         sos_tokens = torch.ones(indices.shape[0], 1) * self.sos_token
         sos_tokens = sos_tokens.long().to("cuda")
 

@@ -9,6 +9,7 @@ from transformer import VQGANTransformer
 
 from dataset_transformer import get_dataloader
 
+
 def configure_optimizers(model):
     decay, no_decay = set(), set()
     whitelist_weight_modules = (nn.Linear, )
