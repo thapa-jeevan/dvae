@@ -1,8 +1,10 @@
 import argparse
 import os
 
+import numpy as np
 import torch
 from torchvision.utils import save_image
+from tqdm import tqdm
 
 from dataset import get_dataloader
 from dvae import DiscreteVAE
@@ -42,16 +44,14 @@ if __name__ == '__main__':
     vae.to(device)
     train_dataloader = get_dataloader(args.batch_size, args.img_folder, args.img_size)
     store_folder = args.store_folder
-    os.makedirs(store_folder)
+#     os.makedirs(store_folder)
 
-    for batch_idx, images in enumerate(train_dataloader):
+    for batch_idx, images in tqdm(enumerate(train_dataloader)):
         images = images.to(device)
 
         with torch.no_grad():
             codes = vae.get_codebook_indices(images)
-
-        for img_idx, code in enumerate(codes):
-            img_name = f"{batch_idx * batch_size + img_idx}.png"
-            img_path = os.path.join(store_folder, img_name)
-            save_image(code, img_path, normalize=True)
+        save_path = os.path.join(store_folder, f"{batch_idx}.npy")
+        with open(save_path, "wb") as f:
+            np.save(f, codes.detach().cpu().numpy())
 
