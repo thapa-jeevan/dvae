@@ -43,10 +43,10 @@ def configure_optimizers(model):
 def train(train_dataloader, model, optimizer, epochs):
     for epoch in range(epochs):
         with tqdm(range(len(train_dataloader))) as pbar:
-            for i, imgs in zip(pbar, train_dataloader):
+            for i, (codes,) in zip(pbar, train_dataloader):
                 optimizer.zero_grad()
-                imgs = imgs.cuda()
-                logits, targets = model(imgs)
+                codes = codes.long().cuda()
+                logits, targets = model(codes)
                 loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
                 loss.backward()
                 optimizer.step()
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
     parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt', help='Path to checkpoint.')
     parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
-    parser.add_argument('--batch-size', type=int, default=20, help='Input batch size for training.')
+    parser.add_argument('--batch-size', type=int, default=32, help='Input batch size for training.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
     parser.add_argument('--learning-rate', type=float, default=2.25e-05, help='Learning rate.')
     parser.add_argument('--beta1', type=float, default=0.5, help='Adam beta param.')
@@ -83,6 +83,7 @@ if __name__ == '__main__':
     args.dataset_path = r"C:\Users\dome\datasets\flowers"
 
     model = VQGANTransformer(args)
+    model.cuda()
     optimizer = configure_optimizers(model)
 
     train_dataloader = get_dataloader(args.batch_size, args.array_folder)

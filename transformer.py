@@ -12,11 +12,11 @@ class VQGANTransformer(nn.Module):
         self.sos_token = args.sos_token
 
         transformer_config = {
-            "vocab_size": args.num_codebook_vectors,
-            "block_size": 512,
+            "vocab_size": 2048,
+            "block_size": 256,
             "n_layer": 24,
             "n_head": 16,
-            "n_embd": 1024
+            "n_embd": 512
         }
         self.transformer = GPT(**transformer_config)
 
