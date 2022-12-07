@@ -43,6 +43,7 @@ def configure_optimizers(model):
 
 def train(train_dataloader, model, optimizer, epochs):
     for epoch in range(epochs):
+        train_loss = 0
         with tqdm(range(len(train_dataloader))) as pbar:
             for i, (codes,) in zip(pbar, train_dataloader):
                 optimizer.zero_grad()
@@ -53,7 +54,9 @@ def train(train_dataloader, model, optimizer, epochs):
                 optimizer.step()
                 pbar.set_postfix(Transformer_Loss=np.round(loss.cpu().detach().numpy().item(), 4))
                 pbar.update(0)
+                train_loss += loss.cpu().detach().numpy().item()
 
+        print(f"\nTraining Loss: {train_loss / len(train_dataloader)}\n")
         torch.save(model.state_dict(), os.path.join("checkpoints", f"transformer_{epoch}.pt"))
 
 
@@ -64,7 +67,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta', type=float, default=0.25, help='Commitment loss scalar.')
     parser.add_argument('--image-channels', type=int, default=3, help='Number of channels of images.')
     parser.add_argument('--dataset-path', type=str, default='./data', help='Path to data.')
-    parser.add_argument('--checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt', help='Path to checkpoint.')
+    parser.add_argument('--checkpoint-path', type=str, default=None, help='Path to checkpoint.')
     parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
     parser.add_argument('--batch-size', type=int, default=32, help='Input batch size for training.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
@@ -85,6 +88,10 @@ if __name__ == '__main__':
 
     model = VQGANTransformer(args)
     model.cuda()
+
+    if args.checkpoint_path:
+        model.load_state_dict(torch.load(args.checkpoint_path))
+
     optimizer = configure_optimizers(model)
 
     train_dataloader = get_dataloader(args.batch_size, args.array_folder)
