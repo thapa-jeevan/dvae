@@ -6,10 +6,11 @@ from mingpt import GPT
 
 
 class VQGANTransformer(nn.Module):
-    def __init__(self, args):
+    def __init__(self, sos_token=0, pkeep=0.5):
         super(VQGANTransformer, self).__init__()
 
-        self.sos_token = args.sos_token
+        self.sos_token = sos_token
+        self.pkeep = pkeep
 
         transformer_config = {
             "vocab_size": 2049,
@@ -19,8 +20,6 @@ class VQGANTransformer(nn.Module):
             "n_embd": 512
         }
         self.transformer = GPT(**transformer_config)
-
-        self.pkeep = args.pkeep
 
     def forward(self, indices):
         indices += 1

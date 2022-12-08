@@ -14,7 +14,8 @@ def get_dataloader(batch_size, array_folder):
             code_ = np.load(f)
             code_list.append(code_)
 
-    codes_array = np.vstack(code_list)
+    # Add one to append start of sequence token in the zeroth index
+    codes_array = np.vstack(code_list) + 1
     train_dataset = TensorDataset(torch.Tensor(codes_array))
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
     return train_dataloader
