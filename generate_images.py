@@ -9,24 +9,20 @@ from transformer import VQGANTransformer
 from dvae import DiscreteVAE
 
 parser = argparse.ArgumentParser(description="VQGAN")
-parser.add_argument('--latent-dim', type=int, default=256, help='Latent dimension n_z.')
 parser.add_argument('--image-size', type=int, default=128, help='Image height and width.)')
-parser.add_argument('--num-codebook-vectors', type=int, default=1024, help='Number of codebook vectors.')
-parser.add_argument('--image-channels', type=int, default=3, help='Number of channels of images.')
-parser.add_argument('--transformer-checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt',
+parser.add_argument('--transformer-checkpoint-path', type=str, default='./checkpoints/transformer_last_ckpt.pt',
                     help='Path to checkpoint.')
-parser.add_argument('--vae-checkpoint-path', type=str, default='./checkpoints/last_ckpt.pt',
+parser.add_argument('--vae-checkpoint-path', type=str, default='./checkpoints/vae_last_ckpt.pt',
                     help='Path to checkpoint.')
-parser.add_argument('--device', type=str, default="cuda", help='Which device the training is on')
-parser.add_argument('--batch-sizecheck', type=int, default=20, help='Input batch size for training.')
-parser.add_argument('--sos-token', type=int, default=0, help='Start of Sentence token.')
-parser.add_argument('--pkeep', type=float, default=0.5, help='Percentage for how much latent codes to keep.')
+
+parser.add_argument('--epoch', type=float, default=None, help='Training epoch if script called by training pipeline.')
 
 if __name__ == '__main__':
+    print("Generating Images")
     args = parser.parse_args()
-    num_generations = 100
+    num_generations = 2
 
-    transformer = VQGANTransformer(args).cuda()
+    transformer = VQGANTransformer(pkeep=1).cuda()
     transformer.load_state_dict(torch.load(args.transformer_checkpoint_path))
 
     vae = DiscreteVAE(
@@ -43,12 +39,22 @@ if __name__ == '__main__':
     print("Loaded state dict of Transformer")
 
     for i in tqdm(range(num_generations)):
+        import numpy as np
+
+        # with open("data/dvae_codes/1.npy", "rb") as f:
+        #     array = np.load(f)
+        #
+        # start_indices = torch.Tensor(array[:4, :200] + 1).long().cuda()
+
         start_indices = torch.zeros((4, 0)).long().cuda()
         sos_tokens = torch.ones(start_indices.shape[0], 1) * 0
         sos_tokens = sos_tokens.long().cuda()
-        sample_indices = transformer.sample(start_indices, sos_tokens, steps=256)
+        sample_indices = transformer.sample(start_indices, sos_tokens, temperature=1, steps=256)
         # TODO: Check sample indices
+
         sample_indices -= 1
 
         sampled_imgs = vae.decode(sample_indices)
-        save_image(sampled_imgs, os.path.join("results", "transformer", f"transformer_{i}.jpg"), nrow=4)
+        img_save_path = os.path.join("results", "transformer_training",
+                                     (f"epoch{args.epoch}" if args.epoch else "") + f"transformer_{i}.jpg")
+        save_image(sampled_imgs, img_save_path, nrow=4)
