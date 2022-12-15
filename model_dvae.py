@@ -5,7 +5,20 @@ import torch.nn.functional as F
 from einops import rearrange
 from torch import einsum, nn
 
-from model_utils import ResBlock
+
+class ResBlock(nn.Module):
+    def __init__(self, chan):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(chan, chan, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(chan, chan, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(chan, chan, 1)
+        )
+
+    def forward(self, x):
+        return self.net(x) + x
 
 
 class DiscreteVAE(nn.Module):
@@ -30,8 +43,6 @@ class DiscreteVAE(nn.Module):
         self.num_layers = num_layers
         self.temperature = temperature
         self.codebook = nn.Embedding(num_tokens, codebook_dim)
-
-        hdim = hidden_dim
 
         enc_chans = [hidden_dim] * num_layers
         dec_chans = list(reversed(enc_chans))
@@ -69,10 +80,7 @@ class DiscreteVAE(nn.Module):
         codebook_indices = logits.argmax(dim=1).flatten(1)
         return codebook_indices
 
-    def decode(
-            self,
-            img_seq
-    ):
+    def decode(self, img_seq):
         image_embeds = self.codebook(img_seq)
         b, n, d = image_embeds.shape
         h = w = int(sqrt(n))
@@ -81,12 +89,7 @@ class DiscreteVAE(nn.Module):
         images = self.decoder(image_embeds)
         return images
 
-    def forward(
-            self,
-            img,
-            return_recon_loss=False,
-            return_logits=False
-    ):
+    def forward(self, img, return_recon_loss=False, return_logits=False):
         logits = self.encoder(img)
 
         if return_logits:

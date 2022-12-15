@@ -1,13 +1,37 @@
-import os
-import numpy as np
-from tqdm import tqdm
 import argparse
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer import VQGANTransformer
+from tqdm import tqdm
 
 from dataset_transformer import get_dataloader
+from model_transformer import VQGANTransformer
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--array_folder', type=str, help='Folder containing dvae codes.')
+    parser.add_argument('--checkpoint_path', type=str, default=None, help='Original checkpoint path to finetune.')
+
+    parser.add_argument('--experiment_name', type=str, default=None, help='Name for the experiment.')
+
+    parser.add_argument('--batch_size', type=int, default=32, help='Input batch size for training.')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
+    parser.add_argument('--learning_rate', type=float, default=3e-04, help='Learning rate.')
+
+    parser.add_argument('--pkeep', type=float, default=0.5, help='Percentage for how much latent codes to keep.')
+    parser.add_argument('--sos_token', type=int, default=0, help='Start of Sentence token.')
+
+    parser.add_argument('--visualize_epochwise_img_generation', type=bool, default=False,
+                        help='If true stores generated images in each epoch.')
+    parser.add_argument('--gen_cuda', type=str, default=None,
+                        help='Cuda device to generate images.')
+    parser.add_argument('--vae_checkpoint_path', type=str, default=None,
+                        help='VAE checkpoint to generate images.')
+    return parser.parse_args()
 
 
 def configure_optimizers(model, learning_rate=4.5e-06):
@@ -77,9 +101,9 @@ def visualize_img_generation(vae_ckpt, experiment_name, gen_cuda):
     assert gen_cuda is not None
 
     def _visualize_img_generation(epoch):
-        sys_cmd = f"CUDA_VISIBLE_DEVICES={gen_cuda} python generate_images.py "\
-            f"--vae-checkpoint-path {vae_ckpt} --transformer-checkpoint-path {get_checkpoint_save_path(epoch)} "\
-            f"--epoch {epoch}"
+        sys_cmd = f"CUDA_VISIBLE_DEVICES={gen_cuda} python generate_images.py " \
+                  f"--vae-checkpoint-path {vae_ckpt} --transformer-checkpoint-path {get_checkpoint_save_path(epoch)} " \
+                  f"--epoch {epoch}"
         print(sys_cmd)
         os.system(sys_cmd)
 
@@ -87,29 +111,9 @@ def visualize_img_generation(vae_ckpt, experiment_name, gen_cuda):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--array-folder', type=str, help='Folder containing dvae codes.')
-    parser.add_argument('--checkpoint-path', type=str, default=None, help='Original checkpoint path to finetune.')
+    args = parse_args()
 
-    parser.add_argument('--experiment-name', type=str, default=None, help='Name for the experiment.')
-
-    parser.add_argument('--batch-size', type=int, default=32, help='Input batch size for training.')
-    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
-    parser.add_argument('--learning-rate', type=float, default=3e-04, help='Learning rate.')
-
-    parser.add_argument('--pkeep', type=float, default=0.5, help='Percentage for how much latent codes to keep.')
-    parser.add_argument('--sos-token', type=int, default=0, help='Start of Sentence token.')
-
-    parser.add_argument('--visualize_epochwise_img_generation', type=bool, default=True,
-                        help='If true stores generated images in each epoch.')
-    parser.add_argument('--gen-cuda', type=str, default=None,
-                        help='Cuda device to generate images.')
-    parser.add_argument('--vae-checkpoint-path', type=str, default=None,
-                        help='VAE checkpoint to generate images.')
-    args = parser.parse_args()
-
-    model = VQGANTransformer(args.sos_token, args.pkeep)
-    model.cuda()
+    model = VQGANTransformer(args.sos_token, args.pkeep).cuda()
 
     if args.checkpoint_path:
         model.load_state_dict(torch.load(args.checkpoint_path))

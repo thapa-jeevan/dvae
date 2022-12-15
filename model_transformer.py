@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from mingpt import GPT
+from model_mingpt import GPT
 
 
 class VQGANTransformer(nn.Module):
@@ -22,7 +22,6 @@ class VQGANTransformer(nn.Module):
         self.transformer = GPT(**transformer_config)
 
     def forward(self, indices):
-        indices += 1
         sos_tokens = torch.ones(indices.shape[0], 1) * self.sos_token
         sos_tokens = sos_tokens.long().to("cuda")
 
